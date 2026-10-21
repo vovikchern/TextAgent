@@ -155,9 +155,6 @@ class TextAgent:
                 answer_parts.append(block.text)
 
         usage = message.usage
-        reasoning_tokens = getattr(usage, "output_tokens", 0) - sum(
-            len(part) for part in answer_parts
-        )  # точная разбивка недоступна, показываем общий расход
         print(
             f"   [токены: вход {usage.input_tokens} / выход {usage.output_tokens} "
             f"(включая размышления)]"
@@ -212,6 +209,19 @@ def main() -> None:
     except RuntimeError as err:
         print(f"❌ {err}")
         sys.exit(1)
+    except ValueError as err:
+        # THINKING_BUDGET_TOKENS задан не числом
+        print(f"❌ Некорректное значение THINKING_BUDGET_TOKENS в .env: {err}")
+        sys.exit(1)
+
+    # Логи запуска: что загружено и с чем работаем (ключ маскируем)
+    masked_key = settings.key[:6] + "..." + settings.key[-4:]
+    print("Конфигурация:")
+    print(f"  • ключ ProxyAPI:    {masked_key}")
+    print(f"  • обычная модель:   {settings.regular_model}")
+    print(f"  • думающая модель:  {settings.thinking_model} (бюджет reasoning: {settings.thinking_budget} токенов)")
+    print(f"  • таймаут запроса:  {REQUEST_TIMEOUT:.0f} с")
+    print()
 
     agent = TextAgent(settings=settings)
     agent.mode = choose_mode(settings.thinking_model, settings.regular_model)
